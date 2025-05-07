@@ -1,3 +1,4 @@
+# ads/models.py
 from django.db import models
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -5,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.db import models
 from django.conf import settings
 from decimal import Decimal
+User = get_user_model()
 
 class Ad(models.Model):
     # 广告类型
@@ -61,6 +63,14 @@ class Ad(models.Model):
     # 状态字段
     is_active = models.BooleanField(default=True)
 
+    def save(self, *args, **kwargs):
+        # 根据status字段来动态设置is_active
+        if self.status in ['approved', 'active']:
+            self.is_active = True
+        else:
+            self.is_active = False
+        super().save(*args, **kwargs)
+
     # ✅ 封装常用逻辑方法
     def increment_display(self):
         self.display_count = models.F('display_count') + 1
@@ -90,6 +100,13 @@ class Ad(models.Model):
     class Meta:
         ordering = ['-created_at']
     
+class ThirdPartyAdMetrics(models.Model):
+    ad = models.ForeignKey(Ad, on_delete=models.CASCADE)
+    developer = models.ForeignKey(User, on_delete=models.CASCADE)  # 如果有自定义User就用自定义的
+    click_count = models.IntegerField(default=0)
+    view_duration_seconds = models.IntegerField(default=0)
+    impression_count = models.IntegerField(default=0)
+    reported_at = models.DateTimeField(auto_now_add=True)
 
 class AdInteraction(models.Model):
     ACTION_CHOICES = (
@@ -109,8 +126,6 @@ class AdInteraction(models.Model):
     def __str__(self):
         return f"{self.ad.title} - {self.action} @ {self.timestamp}"
 
-
-User = get_user_model()
 
 class RechargeRecord(models.Model):
     PAYMENT_CHOICES = [
