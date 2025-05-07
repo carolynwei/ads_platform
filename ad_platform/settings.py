@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'stats',
     'invoices',
     'api',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
@@ -41,14 +42,19 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
-
+CORS_ORIGIN_ALLOW_ALL = True  # 允许所有源进行跨域请求
+# # 或者指定允许的前端域名
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:8080",
+# ]
 ROOT_URLCONF = 'ad_platform.urls'
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

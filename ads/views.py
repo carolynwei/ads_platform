@@ -10,6 +10,19 @@ from rest_framework.permissions import IsAuthenticated
 from .models import RechargeRecord
 from .serializers import RechargeRecordSerializer
 from rest_framework import status
+from django.http import HttpResponse
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from .models import RechargeRecord
+from django.db.models import Q
+from django.http import HttpResponse
+import csv
+import io
+from reportlab.pdfgen import canvas
+from openpyxl import Workbook
+
+def home(request):
+    return HttpResponse("欢迎来到首页！")
 
 class AdViewSet(viewsets.ModelViewSet):
     queryset = Ad.objects.all()  # 确保定义 .queryset
@@ -253,7 +266,8 @@ class RechargeRecordViewSet(viewsets.ModelViewSet):
     
     def get_permissions(self):
         # 根据操作类型来设置权限
-        if self.action == 'list':
+        ad = self.get_object()
+        if self.action == 'list' :
             # 只有 admin 用户有权限查看所有充值记录
             return [IsRealAdmin()]
         elif self.action == 'create':
@@ -272,3 +286,83 @@ class RechargeRecordViewSet(viewsets.ModelViewSet):
         # 保存充值记录，并设置状态为成功
         serializer.save(user=user, status='success')
 
+@login_required
+def recharge_history(request):
+    records = RechargeRecord.objects.filter(user=request.user).order_by('-created_at')
+
+    # 筛选逻辑
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    min_amount = request.GET.get('min_amount')
+    max_amount = request.GET.get('max_amount')
+    status = request.GET.get('status')
+
+    if start_date:
+        records = records.filter(created_at__date__gte=start_date)
+    if end_date:
+        records = records.filter(created_at__date__lte=end_date)
+    if min_amount:
+        records = records.filter(amount__gte=min_amount)
+    if max_amount:
+        records = records.filter(amount__lte=max_amount)
+    if status:
+        records = records.filter(status=status)
+
+    # 导出 Excel
+    if request.GET.get('export') == 'excel':
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['时间', '金额', '支付方式', '状态'])
+        for r in records:
+            writer.writerow([r.created_at.strftime('%Y-%m-%d %H:%M'), r.amount, r.payment_method, r.status])
+        response = HttpResponse(output.getvalue(), content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename=recharge_history.csv'
+        return response
+
+    # 导出 PDF
+    if request.GET.get('export') == 'pdf':
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename=recharge_history.pdf'
+        p = canvas.Canvas(response)
+        y = 800
+        p.drawString(100, y, "充值记录")
+        y -= 30
+        for r in records:
+            text = f"{r.created_at.strftime('%Y-%m-%d %H:%M')} - {r.amount}元 - {r.payment_method} - {r.status}"
+            p.drawString(100, y, text)
+            y -= 20
+        p.showPage()
+        p.save()
+        return response
+
+    return render(request, 'ads/recharge_history.html', {
+        'records': records,
+        'filter': {
+            'start_date': start_date,
+            'end_date': end_date,
+            'min_amount': min_amount,
+            'max_amount': max_amount,
+            'status': status,
+        }
+    })
+
+
+@login_required
+def export_recharge_history(request):
+    # 获取充值记录
+    recharge_records = RechargeRecord.objects.filter(user=request.user).order_by('-created_at')
+
+    # 创建 Excel 文件
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "充值记录"
+    ws.append(["充值金额", "支付方式", "状态", "充值时间"])
+
+    for record in recharge_records:
+        ws.append([record.amount, record.payment_method, record.get_status_display(), record.created_at])
+
+    # 返回 Excel 文件作为响应
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=recharge_history.xlsx'
+    wb.save(response)
+    return response

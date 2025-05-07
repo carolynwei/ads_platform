@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>充值记录</h2>
+
+<form method="get">
+    <label>开始时间: <input type="date" name="start_date" value="{{ filter.start_date }}"></label>
+    <label>结束时间: <input type="date" name="end_date" value="{{ filter.end_date }}"></label>
+    <label>最小金额: <input type="number" step="0.01" name="min_amount" value="{{ filter.min_amount }}"></label>
+    <label>最大金额: <input type="number" step="0.01" name="max_amount" value="{{ filter.max_amount }}"></label>
+    <label>状态:
+        <select name="status">
+            <option value="">全部</option>
+            <option value="pending" {% if filter.status == "pending" %}selected{% endif %}>待处理</option>
+            <option value="success" {% if filter.status == "success" %}selected{% endif %}>成功</option>
+            <option value="failed" {% if filter.status == "failed" %}selected{% endif %}>失败</option>
+        </select>
+    </label>
+    <button type="submit">筛选</button>
+    <button type="submit" name="export" value="excel">导出 Excel</button>
+    <button type="submit" name="export" value="pdf">导出 PDF</button>
+</form>
+
+<table border="1" cellpadding="8">
+    <tr>
+        <th>时间</th>
+        <th>金额</th>
+        <th>支付方式</th>
+        <th>状态</th>
+    </tr>
+    {% for record in records %}
+    <tr>
+        <td>{{ record.created_at|date:"Y-m-d H:i" }}</td>
+        <td>{{ record.amount }}</td>
+        <td>{{ record.get_payment_method_display }}</td>
+        <td>{{ record.get_status_display }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="4">无记录</td></tr>
+    {% endfor %}
+</table>
+{% endblock %}
