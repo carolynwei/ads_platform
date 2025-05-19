@@ -42,3 +42,10 @@ class AdInteractionInline(admin.TabularInline):
 class AdAdmin(admin.ModelAdmin):
     list_display = ('title', 'advertiser', 'ad_type', 'status', 'start_date', 'end_date', 'is_active', 'total_spent')
     inlines = [AdInteractionInline]  # 将 AdInteraction 嵌入到 Ad 后台
+
+from .models import Invoice
+
+@admin.register(Invoice)
+class InvoiceAdmin(admin.ModelAdmin):
+    list_display = ['client', 'title', 'amount', 'status', 'created_at']
+    list_filter = ['status']

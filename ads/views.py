@@ -3,9 +3,9 @@ from rest_framework import viewsets, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from .models import Ad, AdInteraction
-from .serializers import AdSerializer, AdCreateSerializer
-from users.permissions import IsRealAdmin, IsClient, IsAdminOrClient, IsOwnerOrAdmin
+from .models import Ad, AdInteraction, Invoice
+from .serializers import AdSerializer, AdCreateSerializer, InvoiceSerializer
+from users.permissions import IsRealAdmin, IsClient, IsAdminOrClient, IsOwnerOrAdmin, IsThirdPartyDeveloper
 from rest_framework.permissions import IsAuthenticated
 from .models import RechargeRecord
 from .serializers import RechargeRecordSerializer
@@ -21,8 +21,8 @@ import io
 from reportlab.pdfgen import canvas
 from openpyxl import Workbook
 
-def home(request):
-    return HttpResponse("欢迎来到首页！")
+# def home(request):
+#     return HttpResponse("欢迎来到首页！")
 
 class AdViewSet(viewsets.ModelViewSet):
     queryset = Ad.objects.all()  # 确保定义 .queryset
@@ -33,14 +33,14 @@ class AdViewSet(viewsets.ModelViewSet):
             return Ad.objects.all()  # 管理员能查看所有广告
         return Ad.objects.filter(advertiser=self.request.user)  # 客户只能查看自己的广告
 
-    def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update']:
-            return [IsOwnerOrAdmin()]  # 使用 IsOwnerOrAdmin 权限类
-        elif self.action in ['approve', 'reject']:
-            return [IsRealAdmin()]
-        elif self.action in ['list', 'retrieve']:
-            return [IsAdminOrClient()]
-        return [IsAuthenticated()]  # fallback，保险起见
+    # def get_permissions(self):
+    #     if self.action in ['create', 'update', 'partial_update']:
+    #         return [IsOwnerOrAdmin()]  # 使用 IsOwnerOrAdmin 权限类
+    #     elif self.action in ['approve', 'reject']:
+    #         return [IsRealAdmin()]
+    #     elif self.action in ['list', 'retrieve']:
+    #         return [IsAdminOrClient()]
+    #     return [IsAuthenticated()]  # fallback，保险起见
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -75,7 +75,7 @@ class AdViewSet(viewsets.ModelViewSet):
             return Response({'status': 'deleted'})
         return Response({'status': 'error', 'message': 'Cannot delete approved or rejected ad'}, status=400)
 
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=['get'], permission_classes=[IsThirdPartyDeveloper])
     def show(self, request, pk=None):
         """当广告被展示时，展示次数 +1，并判断是否扣费（CPM 模式）"""
         ad = self.get_object()
@@ -133,7 +133,7 @@ class AdViewSet(viewsets.ModelViewSet):
             'ad_status': 'active' if ad.is_active else 'paused'
         })
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], permission_classes=[IsThirdPartyDeveloper])
     def click(self, request, pk=None):
         """当广告被点击时，点击次数 +1，并判断是否扣费（CPC 模式）"""
         ad = self.get_object()
@@ -190,7 +190,7 @@ class AdViewSet(viewsets.ModelViewSet):
             'ad_status': 'active' if ad.is_active else 'paused'
         })
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], permission_classes=[IsThirdPartyDeveloper])
     def play(self, request, pk=None):
         """
         当广告被播放（视频播放等）时，根据播放时长进行扣费（CPT 模式）
@@ -366,3 +366,45 @@ def export_recharge_history(request):
     response['Content-Disposition'] = 'attachment; filename=recharge_history.xlsx'
     wb.save(response)
     return response
+
+class InvoiceViewSet(viewsets.ModelViewSet):
+    queryset = Invoice.objects.all()
+    serializer_class = InvoiceSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff:
+            return Invoice.objects.all()
+        return Invoice.objects.filter(user=user)
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        total_spent = sum(ad.total_spent for ad in user.ads.all())  # ✅ 消费总额校验
+
+        amount = serializer.validated_data.get("amount", 0)
+        if amount > total_spent:
+            raise serializer.ValidationError("开票金额不能大于消费总额")
+
+        serializer.save(user=user, status='pending')
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
+    def approve(self, request, pk=None):
+        invoice = self.get_object()
+        file = request.FILES.get('pdf_file')
+        if not file:
+            return Response({'detail': '缺少 PDF 文件'}, status=400)
+
+        invoice.pdf_file = file
+        invoice.status = 'issued'
+        invoice.approved_at = timezone.now()
+        invoice.save()
+        return Response({'detail': '发票已开出'})
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
+    def reject(self, request, pk=None):
+        invoice = self.get_object()
+        invoice.status = 'rejected'
+        invoice.save()
+        return Response({'detail': '发票申请已驳回'})
+

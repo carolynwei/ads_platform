@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 
 from django.db import models
 from django.conf import settings
-from decimal import Decimal
+
 User = get_user_model()
 
 class Ad(models.Model):
@@ -148,3 +148,22 @@ class RechargeRecord(models.Model):
 
     def __str__(self):
         return f'{self.user.username} - {self.amount} 元'
+
+class Invoice(models.Model):
+    STATUS_CHOICES = [
+        ('pending', '待开票'),
+        ('issued', '已开票'),
+        ('rejected', '已驳回'),
+    ]
+
+    client = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    title = models.CharField(max_length=255, help_text="发票抬头")
+    tax_number = models.CharField(max_length=50, help_text="税号")
+    amount = models.DecimalField(max_digits=10, decimal_places=2, help_text="开票金额")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    pdf_file = models.FileField(upload_to='invoices/', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    approved_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.title} - {self.amount} - {self.status}"

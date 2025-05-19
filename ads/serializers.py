@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Ad
+from .models import Ad, Invoice
 from .models import RechargeRecord
 
 class AdSerializer(serializers.ModelSerializer):
@@ -19,3 +19,9 @@ class RechargeRecordSerializer(serializers.ModelSerializer):
         model = RechargeRecord
         fields = '__all__'
         read_only_fields = ['user', 'created_at', 'status']
+
+class InvoiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Invoice
+        fields = '__all__'
+        read_only_fields = ['status', 'pdf_file', 'created_at', 'approved_at', 'user']

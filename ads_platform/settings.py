@@ -1,4 +1,4 @@
-# ad_platform/ad_platform/settings.py
+# ads_platform/ads_platform/settings.py
 import os
 from pathlib import Path
 
@@ -23,17 +23,18 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'drf_yasg',
     'rest_framework',
     'rest_framework_simplejwt',
     'users',
     'ads',
     'payments',
     'stats',
-    'invoices',
     'api',
     'corsheaders',
 ]
-
+# STATIC_URL = '/static/'
+# STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # 你可以自定义路径
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -43,13 +44,11 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
 ]
-CORS_ORIGIN_ALLOW_ALL = True  # 允许所有源进行跨域请求
-# # 或者指定允许的前端域名
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:8080",
-# ]
-ROOT_URLCONF = 'ad_platform.urls'
+CORS_ALLOW_ALL_ORIGINS = True
+
+ROOT_URLCONF = 'ads_platform.urls'
 
 TEMPLATES = [
     {
@@ -67,7 +66,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'ad_platform.wsgi.application'
+WSGI_APPLICATION = 'ads_platform.wsgi.application'
 
 DATABASES = {
     'default': {

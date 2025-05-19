@@ -1,10 +1,10 @@
-# ad_platform/manage.py
+# ads_platform/manage.py
 #!/usr/bin/env python
 import os
 import sys
 
 if __name__ == "__main__":
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ad_platform.settings")
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ads_platform.settings")
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:

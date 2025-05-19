@@ -31,3 +31,10 @@ class IsOwnerOrAdmin(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         # 允许 admin 执行所有操作，或广告的创建者执行修改操作
         return request.user.is_authenticated and (request.user == obj.advertiser or request.user.role == 'admin')
+
+class IsThirdPartyDeveloper(permissions.BasePermission):
+    """
+    只有第三方开发者才有权限访问。
+    """
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and getattr(request.user, 'role', None) == 'third_party'
