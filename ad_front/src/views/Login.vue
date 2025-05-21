@@ -1,3 +1,83 @@
+<script setup>
+import { ref } from 'vue'
+import { register } from '@/api/user'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+// 注册表单字段
+const username = ref('')
+const password = ref('')
+const confirmPassword = ref('')
+
+// 用于显示错误信息或成功提示
+const errorMsg = ref('')
+const successMsg = ref('')
+
+// 简单的密码确认校验
+const validateForm = () => {
+  if (!username.value || !password.value || !confirmPassword.value) {
+    errorMsg.value = '请填写所有字段'
+    return false
+  }
+  if (password.value !== confirmPassword.value) {
+    errorMsg.value = '两次密码输入不一致'
+    return false
+  }
+  return true
+}
+
+// 表单提交函数
+const onRegisterSubmit = async () => {
+  errorMsg.value = ''
+  successMsg.value = ''
+
+  if (!validateForm()) {
+    return
+  }
+
+  try {
+    const res = await register({
+      username: username.value,
+      password: password.value
+    })
+    successMsg.value = '注册成功！3秒后跳转登录页面...'
+    
+    // 3秒后跳转登录页
+    setTimeout(() => {
+      router.push('/login')
+    }, 3000)
+  } catch (err) {
+    console.error('注册失败', err)
+    // 假设后端返回错误信息在 err.response.data.detail
+    errorMsg.value = err.response?.data?.detail || '注册失败，请稍后重试'
+  }
+}
+</script>
+
+<template>
+  <div class="register-form">
+    <h2>注册新账号</h2>
+    <div>
+      <label>用户名：</label>
+      <input v-model="username" type="text" placeholder="请输入用户名" />
+    </div>
+    <div>
+      <label>密码：</label>
+      <input v-model="password" type="password" placeholder="请输入密码" />
+    </div>
+    <div>
+      <label>确认密码：</label>
+      <input v-model="confirmPassword" type="password" placeholder="请再次输入密码" />
+    </div>
+    
+    <button @click="onRegisterSubmit">注册</button>
+
+    <p style="color:red" v-if="errorMsg">{{ errorMsg }}</p>
+    <p style="color:green" v-if="successMsg">{{ successMsg }}</p>
+  </div>
+</template>
+
 <template>
   <div class="app-container">
     <!-- 导航栏 -->
@@ -36,10 +116,12 @@
       :initialMode="authMode"
       @close="closeAuthModal"
       @switch-mode="switchAuthMode"
+      @login="onSubmitFromModal"
     />
   </div>
 </template>
-<script>
+
+<!-- <script>
 import { ref } from 'vue'
 import AuthModal from '@/components/AuthForm.vue'
 export default {
@@ -77,7 +159,7 @@ export default {
     }
   }
 }
-</script>
+</script> -->
 <style scoped>
 /* 全局样式 */
 .app-container {
