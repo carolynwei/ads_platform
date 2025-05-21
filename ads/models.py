@@ -21,8 +21,7 @@ class Ad(models.Model):
         ('pending', 'Pending'),
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
-        ('active', 'Active'),
-        ('completed', 'Completed'),
+        ('stopped', 'Stopped'),
     )
 
     # 计费方式
@@ -65,7 +64,7 @@ class Ad(models.Model):
 
     def save(self, *args, **kwargs):
         # 根据status字段来动态设置is_active
-        if self.status in ['approved', 'active']:
+        if self.status in ['approved']:
             self.is_active = True
         else:
             self.is_active = False
