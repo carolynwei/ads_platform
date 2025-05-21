@@ -28,9 +28,6 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'users',
     'ads',
-    'payments',
-    'stats',
-    'api',
     'corsheaders',
 ]
 # STATIC_URL = '/static/'
